@@ -1,0 +1,13 @@
+# What this file is for: the Python packages the harness needs, pinned to exact versions so Kaggle and WSL2 match.
+#
+# What to include (one package per line, each with an exact version once installed and tested):
+# - vllm: inference engine. Pin a version that installs on Kaggle's CUDA and supports T4 (compute capability 7.5).
+# - transformers and tokenizers: only if vllm does not pull compatible versions itself.
+# - reasoning-gym: the away generators (Futoshiki, Countdown) and their reference verifiers.
+# - SynLogic is not on PyPI: note here that it is cloned from GitHub at a recorded commit (see docs/lookups.md).
+# - numpy, pandas: item handling and score tables.
+# - matplotlib: the accuracy-vs-difficulty plots.
+# - tqdm: progress bars for long runs.
+# - pytest: the tests in tests/.
+#
+# Do not add anything that is only needed for training (Exp 3); that gets its own requirements file later.
