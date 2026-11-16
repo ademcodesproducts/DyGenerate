@@ -1,13 +1,20 @@
-# What this file is for: the Python packages the harness needs, pinned to exact versions so Kaggle and WSL2 match.
+# Harness dependencies (tested with Python 3.11).
 #
-# What to include (one package per line, each with an exact version once installed and tested):
-# - vllm: inference engine. Pin a version that installs on Kaggle's CUDA and supports T4 (compute capability 7.5).
-# - transformers and tokenizers: only if vllm does not pull compatible versions itself.
-# - reasoning-gym: the away generators (Futoshiki, Countdown) and their reference verifiers.
-# - SynLogic is not on PyPI: note here that it is cloned from GitHub at a recorded commit (see docs/lookups.md).
-# - numpy, pandas: item handling and score tables.
-# - matplotlib: the accuracy-vs-difficulty plots.
-# - tqdm: progress bars for long runs.
-# - pytest: the tests in tests/.
+# The generator is pinned exactly: a different version can generate different items from the same seed.
+# Analysis libraries use lower bounds so they do not fight with whatever numpy vllm needs.
 #
-# Do not add anything that is only needed for training (Exp 3); that gets its own requirements file later.
+# vllm is installed separately, because it only runs on Linux (Kaggle, or WSL2 on the 4060):
+#     pip install vllm==<version>
+# Pin the version here after the Kaggle smoke test confirms it runs on T4 (compute capability 7.5) in fp16.
+#
+# SynLogic is not on PyPI. Clone it into external/ at the recorded commit (see README):
+#     git clone https://github.com/MiniMax-AI/SynLogic.git external/SynLogic
+#     git -C external/SynLogic checkout d8c527fd17edb739172619efb9b681805fc74b8d
+# TinyZero is optional, only for verify.cross_check on Countdown:
+#     git clone https://github.com/Jiayi-Pan/TinyZero.git external/TinyZero
+
+reasoning-gym==0.1.25
+numpy>=1.26
+pandas>=2.0
+matplotlib>=3.8
+pytest>=8.0
