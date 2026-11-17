@@ -14,7 +14,7 @@ ANSWER_BLOCK = re.compile(r"<answer>(.*?)</answer>", re.IGNORECASE | re.DOTALL)
 # Characters allowed in a Futoshiki answer besides digits: separators, and inequality symbols a model
 # may copy from the puzzle layout (stripped before reading numbers).
 _GRID_NOISE = re.compile(r"[,\s<>∧∨^|]+")
-_GRID_ALLOWED = re.compile(r"^[\d,\s<>∧∨^|]*$")
+_GRID_ALLOWED = re.compile(r"^[\d,\s<>∧∨^|\[\]]*$")
 _SYMBOLS = {"×": "*", "÷": "/", "−": "-", "–": "-", "·": "*",
             "\\times": "*", "\\div": "/", "\\cdot": "*", "\\left": "", "\\right": ""}
 _EXPR_ALLOWED = re.compile(r"^[\d+\-*/()\s]+$")
@@ -26,10 +26,14 @@ def last_answer_block(text):
 
 
 def parse_futoshiki_block(block, n):
-    """n lines of n integers; commas and extra spaces tolerated; one comma-separated line accepted."""
+    """n lines of n integers; commas and extra spaces tolerated; one comma-separated line accepted.
+
+    Brackets are allowed and dropped: SynLogic trained its model to answer "[[1 2 3,2 3 1,3 1 2]]".
+    """
     block = block.strip().strip("`").strip()
     if not _GRID_ALLOWED.match(block):
         return None
+    block = block.replace("[", " ").replace("]", " ").strip()
     lines = [ln for ln in block.splitlines() if re.search(r"\d", ln)]
     if len(lines) == 1 and "," in lines[0]:
         lines = lines[0].split(",")

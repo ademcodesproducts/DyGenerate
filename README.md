@@ -53,8 +53,10 @@ Every item records its generator version in `commit`.
 
 ## Training range B
 
-- **Futoshiki:** sizes 4 and 5, both levels. This is a provisional guess: SynLogic only ships 4×4 and 5×5 data. Confirm it from the SynLogic-7B dataset card (docs/lookups.md), then set `range_b_confirmed` in config.py.
-- **Countdown:** 3 or 4 numbers. Countdown-Tasks-3to4 uses numbers 1–99 and targets 10–100, checked on 300 rows.
+- **Futoshiki:** 4×4 only, both levels. SynLogic-7B's 600 Futoshiki training rows are all 4×4.
+- **Countdown:** 3 or 4 numbers. Countdown-Tasks-3to4 uses numbers 1–99 and targets uniform on 10–100.
+
+Sources are in docs/lookups.md. Eval items never repeat a puzzle from the exposed model's training set: make_items drops them and reports the count as `in_training_set`.
 
 ## Known limitations
 
@@ -63,13 +65,13 @@ Every item records its generator version in `commit`.
   - The generator's reference grid often breaks its own inequalities, so kept items get a reference from our solver (`answer_source: "solver"`).
   - Many puzzles have more than one solution (`n_solutions`; about 16% are unique in the pilot). Our checker accepts any valid grid, so scoring is unaffected.
   - The kept items are therefore a filtered slice of SynLogic's distribution. Say so in the paper.
-- **The Countdown home adapter is a reimplementation:** fresh uniform draws in the training ranges, kept only if solvable. TinyZero does not include the script that made Countdown-Tasks-3to4, and its target distribution may not be uniform.
+- **The Countdown home adapter is a reimplementation:** fresh uniform draws in the training ranges, kept only if solvable. The script that made Countdown-Tasks-3to4 is not public, but the dataset's targets are uniform and every sampled row is solvable, so the reimplementation matches its distribution.
 - **Rule matching:**
   - Countdown requires every number to be used exactly once, as both TinyZero's reward and Reasoning Gym's scorer do.
   - Futoshiki answers are any valid grid, as SynLogic's verifier allows.
 - **fp16 on T4:** there's no bf16, so check the first outputs that run_vllm.py prints for garbage.
 - **Truncation:** truncated outputs are kept and reported. A complete answer before the cut still counts.
-- **Statistical power:** at pilot size, a 20-point difference in differences shows up clearly on Futoshiki (4 in-range cells) but not on Countdown (2 in-range cells). Countdown needs the final size.
+- **Statistical power:** the in-range set is now 2 cells for both tasks, so at pilot size (50 items, 1 sample) a 20-point difference in differences may not reach significance. Use the final size (150 items, 4 samples) for any claim.
 
 ## Layout
 

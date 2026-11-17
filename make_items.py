@@ -20,6 +20,7 @@ import gen_futoshiki
 import items
 import prompts
 import solve
+import training_sets
 
 ADAPTERS = {"futoshiki": gen_futoshiki, "countdown": gen_countdown}
 
@@ -100,6 +101,8 @@ def main():
     start_seed, end_seed = config.SEED_RANGES[args.purpose]
     target = per_cell_target(args.task, args.size)
     seen = known_hashes(args.task, args.generator, args.purpose, args.out_dir)
+    in_training = training_sets.training_hashes(args.task)
+    print(f"excluding {len(in_training)} puzzles from the exposed model's training set")
     t0 = time.time()
     out, summary_cells, rejected = [], {}, Counter()
     commit = None
@@ -113,7 +116,9 @@ def main():
             item, reason = make_one(args.task, args.generator, size, level, seed, args.purpose)
             if item is not None:
                 h = items.canonical_hash(args.task, item["puzzle"])
-                if h in seen:
+                if h in in_training:
+                    item, reason = None, "in_training_set"
+                elif h in seen:
                     item, reason = None, "duplicate"
                 else:
                     seen.add(h)

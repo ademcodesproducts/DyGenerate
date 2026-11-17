@@ -114,6 +114,15 @@ def test_purposes_never_share_a_canonical_hash(task, generator):
     assert len(overlap) <= 2
 
 
+@pytest.mark.skipif(not config.TRAINING_SETS["countdown"]["path"].exists(), reason="training set not downloaded")
+def test_known_training_row_is_in_the_exclusion_set():
+    import training_sets
+    hashes = training_sets.training_hashes("countdown")
+    assert len(hashes) > 400_000
+    # first row of Countdown-Tasks-3to4, numbers in a different order: same canonical puzzle
+    assert items.canonical_hash("countdown", items.canonical_countdown([35, 44, 19], 98)) in hashes
+
+
 def test_canonical_prompt_is_generator_independent():
     puzzle = items.canonical_futoshiki(4, [(0, 0, 1)], [((0, 1), (0, 2))])
     a = prompts.build_prompts({"task": "futoshiki", "puzzle": puzzle, "native_text": "A"})

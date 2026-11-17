@@ -19,6 +19,15 @@ RESULTS_DIR = ROOT / "results"
 SYNLOGIC_DIR = Path(os.environ.get("SYNLOGIC_DIR", ROOT / "external" / "SynLogic"))
 TINYZERO_DIR = Path(os.environ.get("TINYZERO_DIR", ROOT / "external" / "TinyZero"))  # only for the cross-check
 
+# The exposed models' actual training data. make_items drops any eval item that matches a row here.
+_HF = "https://huggingface.co/datasets"
+TRAINING_SETS = {
+    "futoshiki": {"url": f"{_HF}/MiniMaxAI/SynLogic/resolve/main/synlogic_easy/train.parquet",
+                  "path": ROOT / "external" / "training_sets" / "synlogic_easy_train.parquet"},
+    "countdown": {"url": f"{_HF}/Jiayi-Pan/Countdown-Tasks-3to4/resolve/main/data/train-00000-of-00001.parquet",
+                  "path": ROOT / "external" / "training_sets" / "countdown_tasks_3to4_train.parquet"},
+}
+
 # ---------------------------------------------------------------- 2. Seed ranges (half-open, never overlapping)
 
 SEED_RANGES = {
@@ -42,10 +51,10 @@ TASKS = {
         "home": "synlogic",            # SynLogic-7B's training generator
         "sizes": [4, 5, 6, 7],
         "levels": [0, 1],
-        # LOOKUP: the settings SynLogic-7B trained on. SynLogic's run.sh only ships 4x4 and 5x5 data,
-        # so this is the working guess until the dataset card confirms it.
-        "range_b": {(4, 0), (4, 1), (5, 0), (5, 1)},
-        "range_b_confirmed": False,
+        # SynLogic-7B trained on SynLogic-Easy (model card), whose 600 Futoshiki rows are all 4x4:
+        # 308 at (2 inequalities, 2 givens) and 292 at (4, 3), i.e. our cells (4, 0) and (4, 1).
+        "range_b": {(4, 0), (4, 1)},
+        "range_b_confirmed": True,
     },
     "countdown": {
         "generators": ["tinyzero", "reasoning_gym"],
@@ -76,7 +85,8 @@ FUTOSHIKI_NATIVE = {
 }
 
 # Countdown native settings. Both generators get the same value and target ranges, taken from the
-# home training data (Countdown-Tasks-3to4: numbers 1-99, targets 10-100, checked on 300 rows).
+# home training data (Countdown-Tasks-3to4, all 490,364 rows: numbers 1-99, targets uniform on 10-100,
+# every sampled row solvable with all numbers once), so uniform draws + a solvability filter match it.
 COUNTDOWN_VALUE_RANGE = (1, 99)
 COUNTDOWN_TARGET_RANGE = {3: (10, 100), 4: (10, 100), 5: (10, 100), 6: (10, 100)}
 # Both TinyZero's reward and Reasoning Gym's scorer require every number to be used exactly once.
@@ -115,13 +125,35 @@ MODELS = {
     "r1-distill-qwen-7b": {"hf_id": "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B", "role": "broad", "task": "futoshiki",
                            "format": "chat", "max_model_len": 18432, "max_new_tokens": 16384, **KAGGLE},
     # Countdown, RTX 4060 (WSL2)
-    "countdown-rl-3b": {"hf_id": "LOOKUP/countdown-rl-3b", "role": "exposed", "task": "countdown",
-                        "home": "tinyzero", "format": "plain", "max_model_len": 4096, "max_new_tokens": 1024, **RTX4060},
-    "qwen2.5-3b": {"hf_id": "Qwen/Qwen2.5-3B", "role": "parent", "task": "countdown",
-                   "format": "plain", "max_model_len": 4096, "max_new_tokens": 1024, **RTX4060},
-    "qwen2.5-3b-instruct": {"hf_id": "Qwen/Qwen2.5-3B-Instruct", "role": "broad", "task": "countdown",
+    # Exposed: philschmid's mini-R1, GRPO from Qwen2.5-3B-Instruct on 45k rows of Countdown-Tasks-3to4,
+    # 450 steps, training reward for a correct equation rose from ~6% to ~40%. "revision" pins the final
+    # weights; without it vLLM would also download every checkpoint folder.
+    "countdown-rl-3b": {"hf_id": "philschmid/qwen-2.5-3b-r1-countdown", "revision": "099c0f8cbfc522e7c3a476edfb749f576b164539",
+                        "role": "exposed", "task": "countdown", "home": "tinyzero", "format": "chat",
+                        "max_model_len": 4096, "max_new_tokens": 1024, **RTX4060},
+    "qwen2.5-3b-instruct": {"hf_id": "Qwen/Qwen2.5-3B-Instruct", "role": "parent", "task": "countdown",
                             "format": "chat", "max_model_len": 4096, "max_new_tokens": 1024, **RTX4060},
+    "qwen2.5-3b": {"hf_id": "Qwen/Qwen2.5-3B", "role": "base", "task": "countdown",
+                   "format": "plain", "max_model_len": 4096, "max_new_tokens": 1024, **RTX4060},
+    # Broad model from another family; gated on Hugging Face (request access first).
+    "llama3.2-3b-instruct": {"hf_id": "meta-llama/Llama-3.2-3B-Instruct", "role": "broad", "task": "countdown",
+                             "format": "chat", "max_model_len": 4096, "max_new_tokens": 1024, **RTX4060},
 }
+
+# Intermediate checkpoints of the Countdown model (commit per training step): a free exposure dose curve.
+COUNTDOWN_RL_CHECKPOINTS = {
+    25: "b821786444e56bbb5d30a099d81aee818107f422", 50: "7e5167b7bad16dfd218e8acba74f48331f767b36",
+    75: "9ab4dbfc85f8a1ed6bfdf09738c3960da2081da7", 100: "2d5757d211bbe485750f16a6ef37b5ec698fc9d7",
+    125: "ae5d28bc12c973cd7a44a94b510658cdaf924e46", 150: "02b892a27b9c0f75f475fd2e396c81d491aedcc8",
+    175: "04b9f34ce27c54ced4fc091a28848e899a09f694", 200: "7bc26ddbc5d39f9eb99e2cc6cfed4008ce5410ea",
+    250: "ac27ceb8ea3bb4dd6aed2eb9cbe2d771a84d5778", 300: "4bab7d2a371da0dcd681853beb2f9316314c71d9",
+    325: "587237376e0055dc3ced0e079397d103bc4cfc31", 350: "eaf0bde9e8aa862b7d3d2f207349b9bb6d25ef6d",
+    375: "1e22d39f3ef664ab1277b55602bb01efba6fe77b", 400: "1039b386053ec6a24fa29c122aac4415cef94fcd",
+    425: "3b18948b10d422cf3212cee9bf526fcbffa8e4a5", 450: "0288df2bb763b0131072549214b3854360360fbc",
+}
+for _step, _rev in COUNTDOWN_RL_CHECKPOINTS.items():
+    MODELS[f"countdown-rl-3b-step{_step}"] = {**MODELS["countdown-rl-3b"], "revision": _rev,
+                                              "role": "exposed_checkpoint", "step": _step}
 
 # ---------------------------------------------------------------- 6. Sampling
 

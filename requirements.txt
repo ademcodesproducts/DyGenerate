@@ -16,5 +16,6 @@
 reasoning-gym==0.1.25
 numpy>=1.26
 pandas>=2.0
+pyarrow>=14.0            # reads the training-set parquet files (training_sets.py)
 matplotlib>=3.8
 pytest>=8.0

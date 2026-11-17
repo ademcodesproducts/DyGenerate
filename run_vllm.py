@@ -50,7 +50,8 @@ def main():
     cfg = dict(config.MODELS[args.model])
     if args.max_model_len:
         cfg["max_model_len"] = args.max_model_len
-    llm = LLM(model=cfg["hf_id"], dtype=cfg["dtype"], tensor_parallel_size=cfg["tensor_parallel_size"],
+    llm = LLM(model=cfg["hf_id"], revision=cfg.get("revision"), tokenizer_revision=cfg.get("revision"),
+              dtype=cfg["dtype"], tensor_parallel_size=cfg["tensor_parallel_size"],
               max_model_len=cfg["max_model_len"], gpu_memory_utilization=cfg["gpu_memory_utilization"],
               seed=config.SAMPLING["seed"])
     tokenizer = llm.get_tokenizer()
@@ -86,7 +87,7 @@ def main():
             with open(out_path, "a", encoding="utf-8") as f:
                 for it, res, p in zip(batch, outputs, params):
                     for k, o in enumerate(res.outputs):
-                        rec = {"item_id": it["id"], "model": args.model, "hf_id": cfg["hf_id"],
+                        rec = {"item_id": it["id"], "model": args.model, "hf_id": cfg["hf_id"], "revision": cfg.get("revision"),
                                "prompt_version": args.prompt, "wrapper_version": it.get("wrapper_version"),
                                "item_file": item_file.name, "sample": k, "text": o.text,
                                "finish_reason": o.finish_reason, "gen_tokens": len(o.token_ids),

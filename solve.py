@@ -105,8 +105,9 @@ def solve_countdown(numbers, target, use_all=None):
     """
     if use_all is None:
         use_all = config.COUNTDOWN_USE_ALL_NUMBERS
+    numbers = [int(x) for x in numbers]   # numpy ints break Fraction hashing
     k = len(numbers)
-    target = Fraction(target)
+    target = Fraction(int(target))
     full = (1 << k) - 1
     vals = {}
     for i, x in enumerate(numbers):

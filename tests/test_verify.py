@@ -110,6 +110,7 @@ def test_parser_normalises_countdown_symbols():
 def test_parser_tolerates_commas_and_one_line_grids():
     assert parse.parse("futoshiki", "<answer>1, 2\n2, 1</answer>", "stop", n=2)[0] == [[1, 2], [2, 1]]
     assert parse.parse("futoshiki", "<answer>1 2, 2 1</answer>", "stop", n=2)[0] == [[1, 2], [2, 1]]
+    assert parse.parse("futoshiki", "<answer>[[1 2,2 1]]</answer>", "stop", n=2)[0] == [[1, 2], [2, 1]]   # SynLogic's trained format
 
 
 def test_parser_fallback_is_off_by_default():
